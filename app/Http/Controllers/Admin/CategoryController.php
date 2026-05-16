@@ -8,51 +8,60 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    public function index() {
-        $categories = Category::latest()->get();
+    // Hiển thị danh sách toàn bộ danh mục trong trang quản trị
+    public function index()
+    {
+        $categories = Category::latest()->paginate(10);
         return view('admin.categories.index', compact('categories'));
     }
 
-    public function create() {
-        return view('admin.categories.create');
-    }
-
-    public function store(Request $request) {
+    // Lưu danh mục mới do admin tạo
+    public function store(Request $request)
+    {
         $request->validate([
-            'name' => 'required|max:255|unique:categories,name',
-            'description' => 'nullable'
+            'name'        => 'required|unique:categories,name|max:255',
+            'description' => 'nullable|max:500'
         ]);
 
         Category::create($request->all());
-        return redirect()->route('admin.categories.index')->with('success', 'Tạo danh mục mới thành công!');
+
+        return back()->with('success', 'Thêm danh mục mới thành công!');
     }
 
-    public function edit($id) {
+    // Hiển thị form sửa danh mục
+    public function edit($id)
+    {
         $category = Category::findOrFail($id);
         return view('admin.categories.edit', compact('category'));
     }
 
-    public function update(Request $request, $id) {
+    // Cập nhật thay đổi danh mục
+    public function update(Request $request, $id)
+    {
         $category = Category::findOrFail($id);
-        
+
         $request->validate([
-            'name' => 'required|max:255|unique:categories,name,' . $category->id,
-            'description' => 'nullable'
+            'name'        => 'required|max:255|unique:categories,name,' . $category->id,
+            'description' => 'nullable|max:500'
         ]);
 
         $category->update($request->all());
+
         return redirect()->route('admin.categories.index')->with('success', 'Cập nhật danh mục thành công!');
     }
 
-    public function destroy($id) {
+    // Xóa danh mục
+    public function destroy($id)
+    {
         $category = Category::findOrFail($id);
 
-        // Kiểm tra xem danh mục có chứa bài viết nào không trước khi xóa để tránh lỗi dữ liệu mồ côi
-        if($category->articles()->count() > 0) {
-            return back()->with('error', 'Không thể xóa danh mục này vì đang có bài viết thuộc danh mục!');
+        // PHÂN TÍCH LOGIC CSDL: 
+        // Trước khi xóa danh mục, kiểm tra xem có bài viết nào đang thuộc danh mục này không (Quan hệ 1-N)
+        if ($category->articles()->count() > 0) {
+            return back()->with('error', 'Không thể xóa! Danh mục này hiện đang có bài viết bên trong.');
         }
 
         $category->delete();
-        return redirect()->route('admin.categories.index')->with('success', 'Xóa danh mục thành công!');
+        return back()->with('success', 'Đã xóa danh mục thành công!');
     }
 }
